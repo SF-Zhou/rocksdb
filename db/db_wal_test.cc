@@ -3149,7 +3149,7 @@ TEST_F(DBWALTest, DirectIOForWAL) {
   Options options = CurrentOptions();
   options.use_direct_io_for_wal = true;
   options.create_if_missing = true;
-  
+
   // Check if direct I/O is supported
   Status s = TryReopen(options);
   if (!s.ok()) {
@@ -3157,20 +3157,20 @@ TEST_F(DBWALTest, DirectIOForWAL) {
     ROCKSDB_GTEST_SKIP("Direct I/O not supported");
     return;
   }
-  
+
   // Write some data to generate WAL writes
   for (int i = 0; i < 100; i++) {
     ASSERT_OK(Put("key" + std::to_string(i), "value" + std::to_string(i)));
   }
-  
+
   // Flush to ensure WAL is written
   ASSERT_OK(dbfull()->FlushWAL(false));
-  
+
   // Verify data can be read back
   for (int i = 0; i < 100; i++) {
     ASSERT_EQ("value" + std::to_string(i), Get("key" + std::to_string(i)));
   }
-  
+
   // Reopen and verify data persisted
   Reopen(options);
   for (int i = 0; i < 100; i++) {
