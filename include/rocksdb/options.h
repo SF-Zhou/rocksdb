@@ -1089,6 +1089,16 @@ struct DBOptions {
   // Default: false
   bool use_direct_io_for_wal = false;
 
+  // WAL pre-allocation block size for zero-fill optimization.
+  // When using direct I/O for WAL writes with enterprise-grade disk PLDP
+  // capability, this option enables pre-allocation of zero-filled blocks to
+  // avoid file length metadata updates on each write. A background thread
+  // will pre-allocate and zero-fill blocks of this size, then fdatasync to
+  // persist the file length. When more than 50% of the current pre-allocated
+  // block is used, the next block is pre-allocated.
+  // Default: 1MB
+  uint64_t wal_direct_io_preallocation_block_size = 1024 * 1024;
+
   // If false, fallocate() calls are bypassed, which disables file
   // preallocation. The file space preallocation is used to increase the file
   // write/append performance. By default, RocksDB preallocates space for WAL,

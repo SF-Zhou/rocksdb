@@ -3178,6 +3178,7 @@ TEST_F(DBWALTest, DirectIOForWAL) {
     ASSERT_EQ("value" + std::to_string(i), Get("key" + std::to_string(i)));
   }
 }
+
 #endif  // ROCKSDB_PLATFORM_POSIX
 
 }  // namespace ROCKSDB_NAMESPACE

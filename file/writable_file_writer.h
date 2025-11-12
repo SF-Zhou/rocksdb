@@ -168,6 +168,16 @@ class WritableFileWriter {
   bool buffered_data_with_checksum_;
   Temperature temperature_;
 
+  // pre-allocation state for direct IO
+  uint64_t preallocation_block_size_;
+  std::atomic<uint64_t>
+      preallocated_size_;  // Total file size with pre-allocation
+  std::atomic<bool> preallocation_in_progress_;
+  std::atomic<bool> preallocation_disabled_;  // Set to true when closing
+  port::Mutex preallocation_mutex_;
+  port::CondVar preallocation_cv_;  // Condition variable for waiting
+  Env* env_;                        // For scheduling background work
+
  public:
   WritableFileWriter(
       std::unique_ptr<FSWritableFile>&& file, const std::string& _file_name,
@@ -178,7 +188,8 @@ class WritableFileWriter {
       const std::vector<std::shared_ptr<EventListener>>& listeners = {},
       FileChecksumGenFactory* file_checksum_gen_factory = nullptr,
       bool perform_data_verification = false,
-      bool buffered_data_with_checksum = false)
+      bool buffered_data_with_checksum = false,
+      uint64_t preallocation_block_size = 0, Env* env = nullptr)
       : file_name_(_file_name),
         writable_file_(std::move(file), io_tracer, _file_name),
         clock_(clock),
@@ -202,9 +213,27 @@ class WritableFileWriter {
         checksum_finalized_(false),
         perform_data_verification_(perform_data_verification),
         buffered_data_crc32c_checksum_(0),
-        buffered_data_with_checksum_(buffered_data_with_checksum) {
+        buffered_data_with_checksum_(buffered_data_with_checksum),
+        preallocation_block_size_(preallocation_block_size),
+        preallocated_size_(0),
+        preallocation_in_progress_(false),
+        preallocation_disabled_(false),
+        preallocation_cv_(&preallocation_mutex_),
+        env_(env) {
     temperature_ = options.temperature;
     assert(!use_direct_io() || max_buffer_size_ > 0);
+
+    if (use_direct_io()) {
+      size_t alignment = writable_file_->GetRequiredBufferAlignment();
+      if (preallocation_block_size_ > 0 && alignment > 0) {
+        preallocation_block_size_ =
+            ((preallocation_block_size_ + alignment - 1) / alignment) *
+            alignment;
+      }
+    } else {
+      assert(preallocation_block_size_ == 0);
+    }
+
     TEST_SYNC_POINT_CALLBACK("WritableFileWriter::WritableFileWriter:0",
                              reinterpret_cast<void*>(max_buffer_size_));
     buf_.Alignment(writable_file_->GetRequiredBufferAlignment());
@@ -222,6 +251,8 @@ class WritableFileWriter {
           file_checksum_gen_factory->CreateFileChecksumGenerator(
               checksum_gen_context);
     }
+    // Trigger initial pre-allocation for newly created files
+    InitialPreallocation();
   }
 
   static IOStatus Create(const std::shared_ptr<FileSystem>& fs,
@@ -367,5 +398,16 @@ class WritableFileWriter {
   // `opts` should've been called with `FinalizeIOOptions()` before passing in
   IOStatus SyncInternal(const IOOptions& opts, bool use_fsync);
   IOOptions FinalizeIOOptions(const IOOptions& opts) const;
+
+  // Trigger initial pre-allocation for newly created file
+  void InitialPreallocation();
+  // Check if we should trigger pre-allocation (>50% of current block used)
+  void MaybeSchedulePreallocation();
+  // Wait for ongoing pre-allocation to complete
+  void WaitForPreallocation();
+  // Background work for pre-allocation
+  static void BGWorkPreallocation(void* writer);
+  // Perform pre-allocation
+  void DoPreallocation();
 };
 }  // namespace ROCKSDB_NAMESPACE
