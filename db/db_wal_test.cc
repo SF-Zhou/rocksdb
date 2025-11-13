@@ -3481,7 +3481,7 @@ TEST_F(DBWALTest, DirectIOPreallocationEdgeCases) {
   ASSERT_OK(dbfull()->FlushWAL(false));
   ASSERT_EQ("value1", Get("key1"));
 
-  // Test 3: Write exactly at block boundary
+  // Test 3: Write close to block boundary
   std::string large_value(128 * 1024 - 100, 'b');  // Close to boundary
   ASSERT_OK(Put("large_key", large_value));
   ASSERT_OK(dbfull()->FlushWAL(false));
