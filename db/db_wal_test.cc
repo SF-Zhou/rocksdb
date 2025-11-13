@@ -3367,7 +3367,7 @@ TEST_F(DBWALTest, DirectIOPreallocationRecovery) {
 TEST_F(DBWALTest, DirectIOPreallocationZeroBlockSize) {
   Options options = CurrentOptions();
   options.use_direct_io_for_wal = true;
-  options.wal_direct_io_preallocation_block_size = 0;  // Disabled
+  options.wal_direct_io_preallocation_block_size = 0;  // 0 (triggers default 1MB fallback)
   options.create_if_missing = true;
 
   Status s = TryReopen(options);
