@@ -7,10 +7,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
-#include <atomic>
-#include <thread>
-#include <vector>
-
 #include "db/db_test_util.h"
 #include "db/db_with_timestamp_test_util.h"
 #include "options/options_helper.h"
@@ -3286,7 +3282,8 @@ TEST_F(DBWALTest, DirectIOPreallocationMultipleFlushes) {
   // Perform multiple write-flush cycles
   for (int round = 0; round < 5; round++) {
     for (int i = 0; i < 100; i++) {
-      std::string key = "round" + std::to_string(round) + "_key" + std::to_string(i);
+      std::string key =
+          "round" + std::to_string(round) + "_key" + std::to_string(i);
       std::string value(256, 'a' + round);
       ASSERT_OK(Put(key, value));
     }
@@ -3296,7 +3293,8 @@ TEST_F(DBWALTest, DirectIOPreallocationMultipleFlushes) {
   // Verify all data across all rounds
   for (int round = 0; round < 5; round++) {
     for (int i = 0; i < 100; i++) {
-      std::string key = "round" + std::to_string(round) + "_key" + std::to_string(i);
+      std::string key =
+          "round" + std::to_string(round) + "_key" + std::to_string(i);
       std::string value(256, 'a' + round);
       ASSERT_EQ(value, Get(key));
     }
