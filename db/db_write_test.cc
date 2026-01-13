@@ -1000,6 +1000,43 @@ TEST_P(DBWriteTest, RecycleLogToggleTest) {
   ASSERT_EQ(Get(Key(1)), "val2");
 }
 
+// Test that use_syncfs option works correctly with sync option
+TEST_P(DBWriteTest, SyncWithUseSyncfs) {
+  WriteOptions write_options;
+  write_options.sync = true;
+  write_options.use_syncfs = true;
+  // Write with sync and use_syncfs should succeed
+  // Note: syncfs is only available on Linux, but the implementation
+  // falls back to fsync on other platforms
+  ASSERT_OK(dbfull()->Put(write_options, "foo", "bar"));
+  ASSERT_EQ(Get("foo"), "bar");
+
+  // Multiple writes should also work
+  WriteBatch batch;
+  ASSERT_OK(batch.Put("key1", "value1"));
+  ASSERT_OK(batch.Put("key2", "value2"));
+  ASSERT_OK(dbfull()->Write(write_options, &batch));
+  ASSERT_EQ(Get("key1"), "value1");
+  ASSERT_EQ(Get("key2"), "value2");
+
+  // Verify data persists after reopen
+  Reopen(GetOptions());
+  ASSERT_EQ(Get("foo"), "bar");
+  ASSERT_EQ(Get("key1"), "value1");
+  ASSERT_EQ(Get("key2"), "value2");
+}
+
+// Test that use_syncfs without sync has no effect (use_syncfs requires sync)
+TEST_P(DBWriteTest, UseSyncfsWithoutSync) {
+  WriteOptions write_options;
+  write_options.sync = false;
+  write_options.use_syncfs = true;
+  // Write should succeed even with use_syncfs=true but sync=false
+  // (use_syncfs only takes effect when sync is true)
+  ASSERT_OK(dbfull()->Put(write_options, "foo", "bar"));
+  ASSERT_EQ(Get("foo"), "bar");
+}
+
 INSTANTIATE_TEST_CASE_P(DBWriteTestInstance, DBWriteTest,
                         testing::Values(DBTestBase::kDefault,
                                         DBTestBase::kConcurrentWALWrites,

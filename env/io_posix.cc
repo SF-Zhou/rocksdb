@@ -1477,6 +1477,8 @@ IOStatus PosixWritableFile::Fsync(const IOOptions& /*opts*/,
 IOStatus PosixWritableFile::Syncfs(const IOOptions& opts,
                                    IODebugContext* dbg) {
 #ifdef OS_LINUX
+  (void)opts;
+  (void)dbg;
   if (syncfs(fd_) < 0) {
     return IOError("While syncfs", filename_, errno);
   }
