@@ -1474,6 +1474,19 @@ IOStatus PosixWritableFile::Fsync(const IOOptions& /*opts*/,
   return IOStatus::OK();
 }
 
+IOStatus PosixWritableFile::Syncfs(const IOOptions& opts,
+                                   IODebugContext* dbg) {
+#ifdef OS_LINUX
+  if (syncfs(fd_) < 0) {
+    return IOError("While syncfs", filename_, errno);
+  }
+  return IOStatus::OK();
+#else
+  // syncfs is only available on Linux, fall back to fsync on other platforms
+  return Fsync(opts, dbg);
+#endif  // OS_LINUX
+}
+
 bool PosixWritableFile::IsSyncThreadSafe() const { return true; }
 
 uint64_t PosixWritableFile::GetFileSize(const IOOptions& /*opts*/,

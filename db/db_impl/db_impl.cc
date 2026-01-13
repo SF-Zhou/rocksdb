@@ -1681,9 +1681,11 @@ IOStatus DBImpl::SyncWalImpl(bool include_current_wal,
       if (log->get_log_number() >= maybe_active_number) {
         assert(log->get_log_number() == maybe_active_number);
         io_s = log->file()->SyncWithoutFlush(opts,
-                                             immutable_db_options_.use_fsync);
+                                             immutable_db_options_.use_fsync,
+                                             write_options.use_syncfs);
       } else {
-        io_s = log->file()->Sync(opts, immutable_db_options_.use_fsync);
+        io_s = log->file()->Sync(opts, immutable_db_options_.use_fsync,
+                                 write_options.use_syncfs);
       }
       if (!io_s.ok()) {
         break;

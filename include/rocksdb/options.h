@@ -1997,6 +1997,19 @@ struct WriteOptions {
   // Default: false
   bool sync = false;
 
+  // If true and sync is also true, use syncfs() instead of fsync()/fdatasync()
+  // to sync data to disk. syncfs() syncs all data on the filesystem containing
+  // the file, which ensures that both RocksDB data and other direct I/O
+  // modifications on the same filesystem are flushed to disk. This provides
+  // stronger data consistency guarantees when RocksDB shares a filesystem with
+  // other applications using direct I/O.
+  //
+  // Note: This option only takes effect when sync is true.
+  // Note: syncfs() is only supported on Linux.
+  //
+  // Default: false
+  bool use_syncfs = false;
+
   // If true, writes will not first go to the write ahead log,
   // and the write may get lost after a crash. The backup engine
   // relies on write-ahead logs to back up the memtable, so if

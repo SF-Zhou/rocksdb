@@ -303,12 +303,13 @@ class WritableFileWriter {
 
   IOStatus Close(const IOOptions& opts);
 
-  IOStatus Sync(const IOOptions& opts, bool use_fsync);
+  IOStatus Sync(const IOOptions& opts, bool use_fsync, bool use_syncfs = false);
 
   // Sync only the data that was already Flush()ed. Safe to call concurrently
   // with Append() and Flush(). If !writable_file_->IsSyncThreadSafe(),
   // returns NotSupported status.
-  IOStatus SyncWithoutFlush(const IOOptions& opts, bool use_fsync);
+  IOStatus SyncWithoutFlush(const IOOptions& opts, bool use_fsync,
+                            bool use_syncfs = false);
 
   // Size including unflushed data written to this writer. If the next op is
   // a successful Close, the file size will be this.
@@ -405,7 +406,8 @@ class WritableFileWriter {
   // `opts` should've been called with `FinalizeIOOptions()` before passing in
   IOStatus RangeSync(const IOOptions& opts, uint64_t offset, uint64_t nbytes);
   // `opts` should've been called with `FinalizeIOOptions()` before passing in
-  IOStatus SyncInternal(const IOOptions& opts, bool use_fsync);
+  IOStatus SyncInternal(const IOOptions& opts, bool use_fsync,
+                        bool use_syncfs = false);
   IOOptions FinalizeIOOptions(const IOOptions& opts) const;
 
   // Check if direct I/O preallocation is enabled

@@ -1494,7 +1494,8 @@ IOStatus DBImpl::WriteToWAL(const WriteThread::WriteGroup& write_group,
         // and closed WAL that just needs to be recorded as synced in the
         // manifest.
         if (auto* f = log.writer->file()) {
-          io_s = f->Sync(opts, immutable_db_options_.use_fsync);
+          io_s = f->Sync(opts, immutable_db_options_.use_fsync,
+                         write_options.use_syncfs);
           if (!io_s.ok()) {
             break;
           }

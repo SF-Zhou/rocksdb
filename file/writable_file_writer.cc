@@ -494,7 +494,8 @@ IOStatus WritableFileWriter::PrepareIOOptions(const WriteOptions& wo,
   return PrepareIOFromWriteOptions(wo, opts);
 }
 
-IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync) {
+IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
+                                 bool use_syncfs) {
   if (seen_error()) {
     return GetWriterHasPreviousErrorStatus();
   }
@@ -507,7 +508,7 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync) {
   }
   TEST_KILL_RANDOM("WritableFileWriter::Sync:0");
   if (!use_direct_io() && pending_sync_) {
-    s = SyncInternal(io_options, use_fsync);
+    s = SyncInternal(io_options, use_fsync, use_syncfs);
     if (!s.ok()) {
       set_seen_error(s);
       return s;
@@ -526,7 +527,7 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync) {
           direct_io_preallocated_size_.load(std::memory_order_acquire);
       // If still not enough, sync to ensure data durability
       if (cur_size > preallocated_size) {
-        s = SyncInternal(io_options, use_fsync);
+        s = SyncInternal(io_options, use_fsync, use_syncfs);
         if (!s.ok()) {
           set_seen_error(s);
           return s;
@@ -540,7 +541,8 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync) {
 }
 
 IOStatus WritableFileWriter::SyncWithoutFlush(const IOOptions& opts,
-                                              bool use_fsync) {
+                                              bool use_fsync,
+                                              bool use_syncfs) {
   if (seen_error()) {
     return GetWriterHasPreviousErrorStatus();
   }
@@ -551,7 +553,7 @@ IOStatus WritableFileWriter::SyncWithoutFlush(const IOOptions& opts,
         "WritableFile::IsSyncThreadSafe() is false");
   }
   TEST_SYNC_POINT("WritableFileWriter::SyncWithoutFlush:1");
-  IOStatus s = SyncInternal(io_options, use_fsync);
+  IOStatus s = SyncInternal(io_options, use_fsync, use_syncfs);
   TEST_SYNC_POINT("WritableFileWriter::SyncWithoutFlush:2");
   if (!s.ok()) {
     set_seen_error(s);
@@ -559,8 +561,8 @@ IOStatus WritableFileWriter::SyncWithoutFlush(const IOOptions& opts,
   return s;
 }
 
-IOStatus WritableFileWriter::SyncInternal(const IOOptions& opts,
-                                          bool use_fsync) {
+IOStatus WritableFileWriter::SyncInternal(const IOOptions& opts, bool use_fsync,
+                                          bool use_syncfs) {
   // Caller is supposed to check seen_error_
   IOStatus s;
   IOSTATS_TIMER_GUARD(fsync_nanos);
@@ -574,7 +576,9 @@ IOStatus WritableFileWriter::SyncInternal(const IOOptions& opts,
     start_ts = FileOperationInfo::StartNow();
   }
 
-  if (use_fsync) {
+  if (use_syncfs) {
+    s = writable_file_->Syncfs(opts, nullptr);
+  } else if (use_fsync) {
     s = writable_file_->Fsync(opts, nullptr);
   } else {
     s = writable_file_->Sync(opts, nullptr);

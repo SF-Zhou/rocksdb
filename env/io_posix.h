@@ -401,6 +401,7 @@ class PosixWritableFile : public FSWritableFile {
   IOStatus Flush(const IOOptions& opts, IODebugContext* dbg) override;
   IOStatus Sync(const IOOptions& opts, IODebugContext* dbg) override;
   IOStatus Fsync(const IOOptions& opts, IODebugContext* dbg) override;
+  IOStatus Syncfs(const IOOptions& opts, IODebugContext* dbg) override;
   bool IsSyncThreadSafe() const override;
   bool use_direct_io() const override { return use_direct_io_; }
   void SetWriteLifeTimeHint(Env::WriteLifeTimeHint hint) override;

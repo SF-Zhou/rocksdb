@@ -1142,6 +1142,17 @@ class FSWritableFile {
     return Sync(options, dbg);
   }
 
+  /*
+   * Sync all data on the filesystem containing this file to disk.
+   * This is useful for ensuring data consistency when sharing a filesystem
+   * with other applications using direct I/O.
+   * By default, falls back to Fsync().
+   * Note: syncfs() is only supported on Linux.
+   */
+  virtual IOStatus Syncfs(const IOOptions& options, IODebugContext* dbg) {
+    return Fsync(options, dbg);
+  }
+
   // true if Sync() and Fsync() are safe to call concurrently with Append()
   // and Flush().
   virtual bool IsSyncThreadSafe() const { return false; }
@@ -1795,6 +1806,9 @@ class FSWritableFileWrapper : public FSWritableFile {
   }
   IOStatus Fsync(const IOOptions& options, IODebugContext* dbg) override {
     return target_->Fsync(options, dbg);
+  }
+  IOStatus Syncfs(const IOOptions& options, IODebugContext* dbg) override {
+    return target_->Syncfs(options, dbg);
   }
   bool IsSyncThreadSafe() const override { return target_->IsSyncThreadSafe(); }
 
