@@ -4962,6 +4962,15 @@ unsigned char rocksdb_writeoptions_get_memtable_insert_hint_per_batch(
   return opt->rep.memtable_insert_hint_per_batch;
 }
 
+void rocksdb_writeoptions_set_use_syncfs(rocksdb_writeoptions_t* opt,
+                                         unsigned char v) {
+  opt->rep.use_syncfs = v;
+}
+
+unsigned char rocksdb_writeoptions_get_use_syncfs(rocksdb_writeoptions_t* opt) {
+  return opt->rep.use_syncfs;
+}
+
 rocksdb_compactoptions_t* rocksdb_compactoptions_create() {
   return new rocksdb_compactoptions_t;
 }

@@ -518,15 +518,18 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
     uint64_t cur_size = filesize_.load(std::memory_order_acquire);
     uint64_t preallocated_size =
         direct_io_preallocated_size_.load(std::memory_order_acquire);
-    if (cur_size > preallocated_size) {
+    // When use_syncfs is true, always call SyncInternal to ensure
+    // filesystem-wide sync including other direct I/O modifications.
+    // Otherwise, only sync if current size exceeds preallocated size.
+    if (use_syncfs || cur_size > preallocated_size) {
       // Ensure any ongoing pre-allocation is complete before returning
       WaitForPreallocation();
 
       // Check again after waiting
       preallocated_size =
           direct_io_preallocated_size_.load(std::memory_order_acquire);
-      // If still not enough, sync to ensure data durability
-      if (cur_size > preallocated_size) {
+      // Sync if use_syncfs is enabled or if still not enough preallocated
+      if (use_syncfs || cur_size > preallocated_size) {
         s = SyncInternal(io_options, use_fsync, use_syncfs);
         if (!s.ok()) {
           set_seen_error(s);

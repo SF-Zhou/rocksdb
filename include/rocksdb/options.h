@@ -2007,6 +2007,9 @@ struct WriteOptions {
   // Note: This option only takes effect when sync is true.
   // Note: syncfs() is only available on Linux. On other platforms, the
   //       implementation falls back to fsync() for best-effort sync behavior.
+  // Note: When direct I/O with preallocation is enabled, setting use_syncfs
+  //       to true will always trigger a sync operation, regardless of whether
+  //       the current file size exceeds the preallocated size.
   //
   // Default: false
   bool use_syncfs = false;

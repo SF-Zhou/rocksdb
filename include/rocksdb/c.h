@@ -2106,6 +2106,10 @@ rocksdb_writeoptions_set_memtable_insert_hint_per_batch(rocksdb_writeoptions_t*,
 extern ROCKSDB_LIBRARY_API unsigned char
 rocksdb_writeoptions_get_memtable_insert_hint_per_batch(
     rocksdb_writeoptions_t*);
+extern ROCKSDB_LIBRARY_API void rocksdb_writeoptions_set_use_syncfs(
+    rocksdb_writeoptions_t*, unsigned char);
+extern ROCKSDB_LIBRARY_API unsigned char rocksdb_writeoptions_get_use_syncfs(
+    rocksdb_writeoptions_t*);
 
 /* Compact range options */
 
