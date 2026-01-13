@@ -1146,8 +1146,10 @@ class FSWritableFile {
    * Sync all data on the filesystem containing this file to disk.
    * This is useful for ensuring data consistency when sharing a filesystem
    * with other applications using direct I/O.
-   * By default, falls back to Fsync().
-   * Note: syncfs() is only supported on Linux.
+   * By default and on non-Linux platforms, falls back to Fsync().
+   * Note: The syncfs() system call is only available on Linux. On other
+   * platforms, implementations should fall back to Fsync() for best-effort
+   * sync behavior.
    */
   virtual IOStatus Syncfs(const IOOptions& options, IODebugContext* dbg) {
     return Fsync(options, dbg);

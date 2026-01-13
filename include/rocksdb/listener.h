@@ -248,6 +248,7 @@ enum class FileOperationType {
   kFlush,
   kSync,
   kFsync,
+  kSyncfs,
   kRangeSync,
   kAppend,
   kPositionedAppend,

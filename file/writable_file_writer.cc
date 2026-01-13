@@ -576,22 +576,22 @@ IOStatus WritableFileWriter::SyncInternal(const IOOptions& opts, bool use_fsync,
     start_ts = FileOperationInfo::StartNow();
   }
 
+  FileOperationType op_type;
   if (use_syncfs) {
     s = writable_file_->Syncfs(opts, nullptr);
+    op_type = FileOperationType::kSyncfs;
   } else if (use_fsync) {
     s = writable_file_->Fsync(opts, nullptr);
+    op_type = FileOperationType::kFsync;
   } else {
     s = writable_file_->Sync(opts, nullptr);
+    op_type = FileOperationType::kSync;
   }
   if (ShouldNotifyListeners()) {
     auto finish_ts = std::chrono::steady_clock::now();
-    NotifyOnFileSyncFinish(
-        start_ts, finish_ts, s,
-        use_fsync ? FileOperationType::kFsync : FileOperationType::kSync);
+    NotifyOnFileSyncFinish(start_ts, finish_ts, s, op_type);
     if (!s.ok()) {
-      NotifyOnIOError(
-          s, (use_fsync ? FileOperationType::kFsync : FileOperationType::kSync),
-          file_name());
+      NotifyOnIOError(s, op_type, file_name());
     }
   }
   SetPerfLevel(prev_perf_level);

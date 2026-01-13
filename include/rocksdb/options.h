@@ -2005,7 +2005,8 @@ struct WriteOptions {
   // other applications using direct I/O.
   //
   // Note: This option only takes effect when sync is true.
-  // Note: syncfs() is only supported on Linux.
+  // Note: syncfs() is only available on Linux. On other platforms, the
+  //       implementation falls back to fsync() for best-effort sync behavior.
   //
   // Default: false
   bool use_syncfs = false;
