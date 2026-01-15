@@ -507,39 +507,27 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
     return s;
   }
   TEST_KILL_RANDOM("WritableFileWriter::Sync:0");
-  if (!use_direct_io() && pending_sync_) {
-    s = SyncInternal(io_options, use_fsync, use_syncfs);
-    if (!s.ok()) {
-      set_seen_error(s);
-      return s;
-    }
-  }
+
+  bool need_sync = pending_sync_ || use_syncfs;
   if (use_direct_io() && UseDirectIOPreallocation()) {
     uint64_t cur_size = filesize_.load(std::memory_order_acquire);
     uint64_t preallocated_size =
         direct_io_preallocated_size_.load(std::memory_order_acquire);
-    // Determine if a sync is needed: always sync if use_syncfs is true,
-    // or if the current file size exceeds the preallocated space.
-    bool need_sync = use_syncfs;
+    // If we've exceeded preallocated space, wait for any ongoing background
+    // preallocation to complete and ensure metadata is synced.
     if (cur_size > preallocated_size) {
-      // If we've exceeded preallocated space, wait for any ongoing background
-      // preallocation to complete.
       WaitForPreallocation();
-
-      // Check again after waiting
       preallocated_size =
           direct_io_preallocated_size_.load(std::memory_order_acquire);
-      // After waiting, check if we still need to sync due to exceeding
-      // preallocation.
       need_sync |= (cur_size > preallocated_size);
     }
+  }
 
-    if (need_sync) {
-      s = SyncInternal(io_options, use_fsync, use_syncfs);
-      if (!s.ok()) {
-        set_seen_error(s);
-        return s;
-      }
+  if (need_sync) {
+    s = SyncInternal(io_options, use_fsync, use_syncfs);
+    if (!s.ok()) {
+      set_seen_error(s);
+      return s;
     }
   }
   TEST_KILL_RANDOM("WritableFileWriter::Sync:1");
