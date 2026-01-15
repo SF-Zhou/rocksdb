@@ -495,7 +495,7 @@ IOStatus WritableFileWriter::PrepareIOOptions(const WriteOptions& wo,
 }
 
 IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
-                                 bool use_syncfs) {
+                                  bool use_syncfs) {
   if (seen_error()) {
     return GetWriterHasPreviousErrorStatus();
   }
@@ -518,23 +518,27 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
     uint64_t cur_size = filesize_.load(std::memory_order_acquire);
     uint64_t preallocated_size =
         direct_io_preallocated_size_.load(std::memory_order_acquire);
-    // When use_syncfs is true, always call SyncInternal to ensure
-    // filesystem-wide sync including other direct I/O modifications.
-    // Otherwise, only sync if current size exceeds preallocated size.
-    if (use_syncfs || cur_size > preallocated_size) {
-      // Ensure any ongoing pre-allocation is complete before returning
+    // Determine if a sync is needed: always sync if use_syncfs is true,
+    // or if the current file size exceeds the preallocated space.
+    bool need_sync = use_syncfs;
+    if (cur_size > preallocated_size) {
+      // If we've exceeded preallocated space, wait for any ongoing background
+      // preallocation to complete.
       WaitForPreallocation();
 
       // Check again after waiting
       preallocated_size =
           direct_io_preallocated_size_.load(std::memory_order_acquire);
-      // Sync if use_syncfs is enabled or if still not enough preallocated
-      if (use_syncfs || cur_size > preallocated_size) {
-        s = SyncInternal(io_options, use_fsync, use_syncfs);
-        if (!s.ok()) {
-          set_seen_error(s);
-          return s;
-        }
+      // After waiting, check if we still need to sync due to exceeding
+      // preallocation.
+      need_sync |= (cur_size > preallocated_size);
+    }
+
+    if (need_sync) {
+      s = SyncInternal(io_options, use_fsync, use_syncfs);
+      if (!s.ok()) {
+        set_seen_error(s);
+        return s;
       }
     }
   }
@@ -544,8 +548,7 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
 }
 
 IOStatus WritableFileWriter::SyncWithoutFlush(const IOOptions& opts,
-                                              bool use_fsync,
-                                              bool use_syncfs) {
+                                              bool use_fsync, bool use_syncfs) {
   if (seen_error()) {
     return GetWriterHasPreviousErrorStatus();
   }
