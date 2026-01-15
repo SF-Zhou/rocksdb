@@ -508,7 +508,12 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync,
   }
   TEST_KILL_RANDOM("WritableFileWriter::Sync:0");
 
-  bool need_sync = pending_sync_ || use_syncfs;
+  // Determine if a sync is needed.
+  // For non-direct I/O, we need to sync if there's pending data.
+  // For direct I/O, data is already persisted via O_DIRECT, so we only need to
+  // sync metadata if we've exceeded preallocated space, or if the user
+  // explicitly requested syncfs.
+  bool need_sync = (!use_direct_io() && pending_sync_) || use_syncfs;
   if (use_direct_io() && UseDirectIOPreallocation()) {
     uint64_t cur_size = filesize_.load(std::memory_order_acquire);
     uint64_t preallocated_size =
